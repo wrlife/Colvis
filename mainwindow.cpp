@@ -1,6 +1,7 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 
+
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow)
@@ -12,6 +13,7 @@ MainWindow::MainWindow(QWidget *parent) :
     QVTKWidget* widget = this->findChild<QVTKWidget*>("qvtk");
 
     widget->GetRenderWindow()->AddRenderer( m_syndata->getrenderer() );
+
 
 }
 
@@ -94,4 +96,20 @@ void MainWindow::updatecamera()
 
 }
 
+
+void MainWindow::addlight()
+{
+    QVTKWidget* widget = this->findChild<QVTKWidget*>("qvtk");
+    widget->GetRenderWindow()->Render();
+
+    m_syndata->getrenderer()->RemoveAllLights();
+
+
+    m_syndata->addlight();
+
+  //  m_syndata->getrenderer()->LightFollowCameraOn();
+     //std::cout << "Originally there are " << m_originalLights->GetNumberOfItems() << " lights.";
+
+     //m_originalLights->GetNextItem()->SetLightTypeToHeadlight();
+}
 

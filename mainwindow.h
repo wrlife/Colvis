@@ -6,6 +6,7 @@
 #include "filemanager.h"
 #include "genesyndata.h"
 #include <QTimer>
+#include <vtkLightCollection.h>
 
 namespace Ui {
 class MainWindow;
@@ -17,6 +18,7 @@ class MainWindow : public QMainWindow
 
 public:
     explicit MainWindow(QWidget *parent = 0);
+    void addlight();
     ~MainWindow();
 
 private slots:
@@ -33,6 +35,8 @@ private:
     //Start Generate synthetic data
     Genesyndata* m_syndata;
     QTimer *m_timer;
+
+    vtkLightCollection* m_originalLights;
 };
 
 #endif // MAINWINDOW_H
