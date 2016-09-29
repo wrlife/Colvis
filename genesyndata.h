@@ -28,6 +28,9 @@ public:
 
 
     void updatecamera();
+    void setconstantlight(int value);
+    void setlinearlight(int value);
+    void setqudraticlight(int value);
 
 
 private:

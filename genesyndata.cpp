@@ -37,14 +37,9 @@ Genesyndata::Genesyndata()
 
     //m_light->SetPosition(lightPosition[0], lightPosition[1], lightPosition[2]);
 
-    m_light->SetPositional(true); // required for vtkLightActor below
 
-    m_light->SetConeAngle(180);
    // m_light->SetFocalPoint(lightFocalPoint[0], lightFocalPoint[1], lightFocalPoint[2]);
 
-    m_light->SetDiffuseColor(255,255,255);
-    m_light->SetAmbientColor(255,255,255);
-    m_light->SetSpecularColor(255,255,255);
 
 
     // Display where the light is
@@ -57,11 +52,20 @@ Genesyndata::Genesyndata()
         vtkSmartPointer<vtkRenderer>::New();
     m_light->SetAttenuationValues(0,0,0.3);
 
+    m_light->SetPositional(true); // required for vtkLightActor below
+
+    m_light->SetConeAngle(180);
+
+    m_light->SetDiffuseColor(255,255,255);
+    m_light->SetAmbientColor(255,255,255);
+    m_light->SetSpecularColor(255,255,255);
+
+    m_light->SetLightTypeToHeadlight();
+
+
     //p=m_renderer->GetAmbient();
 
     //p=m_light->GetAttenuationValues();
-
-    std::cout<<"const: "<<p[0]<<"linear: "<<p[1]<<"  qudratic:"<<p[2];
 
     //m_renderer->AddViewProp(m_lightActor);
     //originalLights->GetNextItem()->SetLightTypeToHeadlight();
@@ -69,12 +73,9 @@ Genesyndata::Genesyndata()
     m_renderer->AddActor(m_Actor);
 
 
-
-
     counter=0;
 
 }
-
 
 //==================
 //Render 3D model
@@ -139,6 +140,24 @@ void Genesyndata::updatecamera()
 void Genesyndata::addlight()
 {
     m_renderer->AddLight(m_light);
+}
+
+void Genesyndata::setconstantlight(int value)
+{
+    m_light->SetAttenuationValues(float(value)/100,0,0);
+
+}
+
+void Genesyndata::setlinearlight(int value)
+{
+    m_light->SetAttenuationValues(0,float(value)/100,0);
+
+}
+
+void Genesyndata::setqudraticlight(int value)
+{
+    m_light->SetAttenuationValues(0,0,float(value)/100);
+
 }
 
 

@@ -40,6 +40,8 @@
      <string>&amp;Tools</string>
     </property>
     <addaction name="action_Load_camera_path"/>
+    <addaction name="action_Lighting"/>
+    <addaction name="actionModify"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menu_Tools"/>
@@ -66,6 +68,16 @@
   <action name="action_Load_camera_path">
    <property name="text">
     <string>&amp;Load camera path</string>
+   </property>
+  </action>
+  <action name="action_Lighting">
+   <property name="text">
+    <string>&amp;Lighting</string>
+   </property>
+  </action>
+  <action name="actionModify">
+   <property name="text">
+    <string>modify</string>
    </property>
   </action>
  </widget>

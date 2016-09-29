@@ -15,11 +15,13 @@ TEMPLATE = app
 SOURCES += main.cpp\
         mainwindow.cpp \
     genesyndata.cpp \
-    filemanager.cpp
+    filemanager.cpp \
+    lightdialog.cpp
 
 HEADERS  += mainwindow.h \
     genesyndata.h \
-    filemanager.h
+    filemanager.h \
+    lightdialog.h
 
 QMAKE_CXXFLAGS += -Wno-deprecated
 INCLUDEPATH += /usr/local/include/vtk-7.0
@@ -36,4 +38,5 @@ LIBS += -L/usr/local/lib -ldl -lGL -lvtkCommonColor-7.0 -lvtkCommonCore-7.0 \
   -lvtkIOXML-7.0
 
 
-FORMS    += mainwindow.ui
+FORMS    += mainwindow.ui \
+    lightdialog.ui

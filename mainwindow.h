@@ -5,6 +5,7 @@
 #include <QFileDialog>
 #include "filemanager.h"
 #include "genesyndata.h"
+#include "lightdialog.h"
 #include <QTimer>
 #include <vtkLightCollection.h>
 
@@ -19,6 +20,8 @@ class MainWindow : public QMainWindow
 public:
     explicit MainWindow(QWidget *parent = 0);
     void addlight();
+
+
     ~MainWindow();
 
 private slots:
@@ -29,12 +32,18 @@ private slots:
 
     void updatecamera();
 
+    void on_action_Lighting_triggered();
+
+    void on_actionModify_triggered();
+
 private:
     Ui::MainWindow *ui;
     Filemanager * m_filemanager;
     //Start Generate synthetic data
     Genesyndata* m_syndata;
     QTimer *m_timer;
+
+    lightDialog m_lightdialog;
 
     vtkLightCollection* m_originalLights;
 };

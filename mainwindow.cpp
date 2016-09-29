@@ -14,6 +14,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
     widget->GetRenderWindow()->AddRenderer( m_syndata->getrenderer() );
 
+    m_lightdialog.setscene(m_syndata);
 
 }
 
@@ -113,3 +114,17 @@ void MainWindow::addlight()
      //m_originalLights->GetNextItem()->SetLightTypeToHeadlight();
 }
 
+
+void MainWindow::on_action_Lighting_triggered()
+{
+    m_lightdialog.exec();
+}
+
+
+
+void MainWindow::on_actionModify_triggered()
+{
+    //m_syndata->modiflight();
+    QVTKWidget* widget = this->findChild<QVTKWidget*>("qvtk");
+    widget->GetRenderWindow()->Render();
+}
