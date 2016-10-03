@@ -5,70 +5,48 @@
 #include <vtkPolyDataNormals.h>
 #include <vtkLightCollection.h>
 
+#include <vtkBMPWriter.h>
+#include <vtkWindowToImageFilter.h>
+#include <vtkImageShiftScale.h>
+#include <vtkPNGWriter.h>
+#include <fstream>
+#include <vtkMatrix4x4.h>
+#include <vtkFloatArray.h>
+#include <string>
+#include <sstream>
+
+
 
 Genesyndata::Genesyndata()
 {
 
-    m_sphereSource =
-      vtkSmartPointer<vtkSphereSource>::New();
+//    m_sphereSource =
+//      vtkSmartPointer<vtkSphereSource>::New();
     //Mapper
     m_Mapper =
         vtkSmartPointer<vtkPolyDataMapper>::New();
-      m_Mapper->SetInputConnection(m_sphereSource->GetOutputPort());
+//      m_Mapper->SetInputConnection(m_sphereSource->GetOutputPort());
 
     //Actor
     m_Actor =
         vtkSmartPointer<vtkActor>::New();
     m_Actor->SetMapper(m_Mapper);
-
     m_Actor->GetProperty()->SetInterpolationToGouraud();
 
     //light
-    double lightPosition[3] = {0, 0, 2};
-
-    // Create a light
-    double lightFocalPoint[3] = {1,0,0};
-    double *p;
-
     m_light = vtkSmartPointer<vtkLight>::New();
-
     m_light->SetLightTypeToHeadlight();
-
-
-    //m_light->SetPosition(lightPosition[0], lightPosition[1], lightPosition[2]);
-
-
-   // m_light->SetFocalPoint(lightFocalPoint[0], lightFocalPoint[1], lightFocalPoint[2]);
-
-
-
-    // Display where the light is
-    //m_lightActor = vtkSmartPointer<vtkLightActor>::New();
-    //m_lightActor->SetLight(m_light);
-
+    m_light->SetAttenuationValues(0,0,0.2);
+    m_light->SetPositional(true); // required for vtkLightActor below
+    m_light->SetConeAngle(180);
+    m_light->SetDiffuseColor(128,128,128);
+    m_light->SetAmbientColor(128,128,128);
+    m_light->SetSpecularColor(128,128,128);
+    m_light->SetLightTypeToHeadlight();
 
     //Renderer
     m_renderer =
         vtkSmartPointer<vtkRenderer>::New();
-    m_light->SetAttenuationValues(0,0,0.3);
-
-    m_light->SetPositional(true); // required for vtkLightActor below
-
-    m_light->SetConeAngle(180);
-
-    m_light->SetDiffuseColor(255,255,255);
-    m_light->SetAmbientColor(255,255,255);
-    m_light->SetSpecularColor(255,255,255);
-
-    m_light->SetLightTypeToHeadlight();
-
-
-    //p=m_renderer->GetAmbient();
-
-    //p=m_light->GetAttenuationValues();
-
-    //m_renderer->AddViewProp(m_lightActor);
-    //originalLights->GetNextItem()->SetLightTypeToHeadlight();
 
     m_renderer->AddActor(m_Actor);
 
@@ -95,7 +73,8 @@ void Genesyndata::rendermodel(vtkSmartPointer<vtkPolyData> t_model)
 
     m_Mapper->SetInputData(t_model);
 
-    m_renderer->ResetCamera();
+    //m_renderer->ResetCamera();
+
 
 }
 
@@ -107,12 +86,8 @@ void Genesyndata::loadcamerapath(vtkSmartPointer<vtkPolyData> t_model)
 {
 
     //m_renderer->ResetCamera();
-
-
     m_camerapath=t_model;
-
-
-
+    m_numcams=t_model->GetNumberOfPoints();
 }
 
 
@@ -122,6 +97,7 @@ void Genesyndata::loadcamerapath(vtkSmartPointer<vtkPolyData> t_model)
 void Genesyndata::updatecamera()
 {
     //Get inital camera position
+
     double p[3];
     m_camerapath->GetPoint(counter,p);
 
@@ -132,8 +108,72 @@ void Genesyndata::updatecamera()
     m_camerapath->GetPoint(counter+1,p);
 
     t_camera->SetFocalPoint(p[0],p[1],p[2]);
-
     counter++;
+}
+
+
+//===============
+// Obtain the depth map observed at current camera view
+//===============
+
+void Genesyndata::get_z_values(vtkRenderWindow*t_renderwin)
+{
+
+
+    vtkSmartPointer<vtkWindowToImageFilter> windowToImageFilter =
+      vtkSmartPointer<vtkWindowToImageFilter>::New();
+    windowToImageFilter->SetInput(t_renderwin);
+    windowToImageFilter->SetMagnification(1); //set the resolution of the output image (3 times the current resolution of vtk render window)
+    windowToImageFilter->SetInputBufferTypeToRGBA(); //also record the alpha (transparency) channel
+    windowToImageFilter->ReadFrontBufferOff(); // read from the back buffer
+    windowToImageFilter->Update();
+
+    vtkSmartPointer<vtkPNGWriter> writer =
+      vtkSmartPointer<vtkPNGWriter>::New();
+
+
+    std::ostringstream oss;
+
+    int t_count=counter;
+    oss<<"frame"<<setfill('0')<<setw(5)<<t_count<<".png";
+
+    std::string filename=oss.str();
+
+    writer->SetFileName( ("./images/"+filename).c_str());
+    writer->SetInputConnection(windowToImageFilter->GetOutputPort());
+    writer->Write();
+
+
+    //
+    vtkSmartPointer<vtkCamera> t_camera=m_renderer->GetActiveCamera();
+
+
+    double* cliprange=t_camera->GetClippingRange();
+
+    double nearclip=cliprange[0];
+    double farclip=cliprange[1];
+
+
+    int * t_sz=t_renderwin->GetSize();
+    int t_width=t_sz[0];
+    int t_height=t_sz[1];
+
+
+    float *zvalues = new float[t_width * t_height];
+
+    t_renderwin->GetZbufferData(0,0,t_width-1,t_height-1,zvalues);
+    //vtkMatrix4x4*t_matrix= t_camera->GetProjectionTransformMatrix(t_width/t_height,nearclip,farclip);
+
+    //rescale z from [0,1] to [-1,1]
+    for (int i=0;i<t_width*t_height;i++){
+        zvalues[i]=zvalues[i]*2-1;
+        zvalues[i]=2*nearclip*farclip/(farclip+nearclip-zvalues[i]*(farclip-nearclip));
+    }
+
+    std::string depthfilename="./depth/"+filename+".bin";
+    ofstream myFile(depthfilename.c_str(),ios::out | ios::binary);
+    myFile.write((char*)zvalues,sizeof(float)*t_width*t_height);
+
 }
 
 

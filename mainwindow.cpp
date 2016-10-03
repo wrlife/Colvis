@@ -13,7 +13,6 @@ MainWindow::MainWindow(QWidget *parent) :
     QVTKWidget* widget = this->findChild<QVTKWidget*>("qvtk");
 
     widget->GetRenderWindow()->AddRenderer( m_syndata->getrenderer() );
-
     m_lightdialog.setscene(m_syndata);
 
 }
@@ -50,6 +49,7 @@ void MainWindow::on_action_New_file_triggered()
     QVTKWidget* widget = this->findChild<QVTKWidget*>("qvtk");
     widget->GetRenderWindow()->Render();
 
+
 }
 
 
@@ -75,11 +75,22 @@ void MainWindow::on_action_Load_camera_path_triggered()
     //Render file
     m_syndata->loadcamerapath(m_filemanager->getfile());
 
-    m_timer=new QTimer(this);
+    for (int i=0;i<m_syndata->get_num_cams();i++)
+    {
 
-    connect(m_timer,SIGNAL(timeout()),this,SLOT(updatecamera()));
+        this->updatecamera();
+        QVTKWidget* widget = this->findChild<QVTKWidget*>("qvtk");
+        widget->GetRenderWindow()->Render();
+        m_syndata->get_z_values(widget->GetRenderWindow());
+    }
 
-    m_timer->start(300);
+
+
+//    m_timer=new QTimer(this);
+
+//    connect(m_timer,SIGNAL(timeout()),this,SLOT(updatecamera()));
+
+//    m_timer->start(300);
 
 
 }
@@ -126,5 +137,5 @@ void MainWindow::on_actionModify_triggered()
 {
     //m_syndata->modiflight();
     QVTKWidget* widget = this->findChild<QVTKWidget*>("qvtk");
-    widget->GetRenderWindow()->Render();
+    m_syndata->get_z_values(widget->GetRenderWindow());
 }

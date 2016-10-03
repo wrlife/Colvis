@@ -12,6 +12,7 @@
 #include <vtkPolyData.h>
 #include <vtkLight.h>
 #include <vtkLightActor.h>
+#include <vtkWindowToImageFilter.h>
 
 class Genesyndata
 {
@@ -25,6 +26,10 @@ public:
     void rendermodel(vtkSmartPointer<vtkPolyData> t_model);
 
     void loadcamerapath(vtkSmartPointer<vtkPolyData> t_model);
+
+    void get_z_values(vtkRenderWindow*t_renderwin);
+
+    int get_num_cams(){return m_numcams;}
 
 
     void updatecamera();
@@ -44,6 +49,7 @@ private:
     vtkSmartPointer<vtkLightActor> m_lightActor;
 
     int counter;
+    int m_numcams;
 
 
 };
