@@ -36,6 +36,10 @@ public:
     void setconstantlight(int value);
     void setlinearlight(int value);
     void setqudraticlight(int value);
+    void setambient(int value);
+    void setdiffuse(int value);
+    void setspecular(int value);
+    void randomcampos(float x,float y,float z, float elevation,float azimuth);
 
 
 private:
@@ -49,6 +53,7 @@ private:
     vtkSmartPointer<vtkLightActor> m_lightActor;
 
     int counter;
+    int totalcount;
     int m_numcams;
 
 

@@ -36,12 +36,12 @@ Genesyndata::Genesyndata()
     //light
     m_light = vtkSmartPointer<vtkLight>::New();
     m_light->SetLightTypeToHeadlight();
-    m_light->SetAttenuationValues(0,0,0.2);
+    m_light->SetAttenuationValues(0,0.2,0);
     m_light->SetPositional(true); // required for vtkLightActor below
     m_light->SetConeAngle(180);
-    m_light->SetDiffuseColor(128,128,128);
-    m_light->SetAmbientColor(128,128,128);
-    m_light->SetSpecularColor(128,128,128);
+    m_light->SetDiffuseColor(100,100,100);
+    m_light->SetAmbientColor(100,100,100);
+    m_light->SetSpecularColor(100,100,100);
     m_light->SetLightTypeToHeadlight();
 
     //Renderer
@@ -52,6 +52,7 @@ Genesyndata::Genesyndata()
 
 
     counter=0;
+    totalcount=0;
 
 }
 
@@ -60,6 +61,7 @@ Genesyndata::Genesyndata()
 //==================
 void Genesyndata::rendermodel(vtkSmartPointer<vtkPolyData> t_model)
 {
+
 
     // calculate normals
      vtkSmartPointer<vtkPolyDataNormals> normalGenerator = vtkSmartPointer<vtkPolyDataNormals>::New();
@@ -73,7 +75,7 @@ void Genesyndata::rendermodel(vtkSmartPointer<vtkPolyData> t_model)
 
     m_Mapper->SetInputData(t_model);
 
-    //m_renderer->ResetCamera();
+    m_renderer->ResetCamera();
 
 
 }
@@ -105,10 +107,30 @@ void Genesyndata::updatecamera()
     vtkSmartPointer<vtkCamera> t_camera=m_renderer->GetActiveCamera();
     t_camera->SetPosition(p[0],p[1],p[2]);
 
-    m_camerapath->GetPoint(counter+1,p);
+    m_camerapath->GetPoint(counter+1,p);  
 
     t_camera->SetFocalPoint(p[0],p[1],p[2]);
     counter++;
+}
+
+
+void Genesyndata::randomcampos(float x,float y,float z, float elevation,float azimuth)
+{
+    double p[3];
+    m_camerapath->GetPoint(counter-1,p);
+    vtkSmartPointer<vtkCamera> t_camera=m_renderer->GetActiveCamera();
+
+
+    t_camera->SetPosition(p[0]+x,p[1]+y,p[2]+z);
+
+    m_camerapath->GetPoint(counter,p);
+
+    t_camera->SetFocalPoint(p[0]+x,p[1]+y,p[2]+z);
+
+    t_camera->Elevation(elevation);
+    t_camera->Azimuth(azimuth);
+
+    totalcount+=1;
 }
 
 
@@ -123,7 +145,7 @@ void Genesyndata::get_z_values(vtkRenderWindow*t_renderwin)
     vtkSmartPointer<vtkWindowToImageFilter> windowToImageFilter =
       vtkSmartPointer<vtkWindowToImageFilter>::New();
     windowToImageFilter->SetInput(t_renderwin);
-    windowToImageFilter->SetMagnification(1); //set the resolution of the output image (3 times the current resolution of vtk render window)
+    windowToImageFilter->SetMagnification(1); //set the resolution of the output image (3 times the current resolution of vtk render windowtotalcount)
     windowToImageFilter->SetInputBufferTypeToRGBA(); //also record the alpha (transparency) channel
     windowToImageFilter->ReadFrontBufferOff(); // read from the back buffer
     windowToImageFilter->Update();
@@ -131,10 +153,9 @@ void Genesyndata::get_z_values(vtkRenderWindow*t_renderwin)
     vtkSmartPointer<vtkPNGWriter> writer =
       vtkSmartPointer<vtkPNGWriter>::New();
 
-
     std::ostringstream oss;
 
-    int t_count=counter;
+    int t_count=totalcount;
     oss<<"frame"<<setfill('0')<<setw(5)<<t_count<<".png";
 
     std::string filename=oss.str();
@@ -143,8 +164,6 @@ void Genesyndata::get_z_values(vtkRenderWindow*t_renderwin)
     writer->SetInputConnection(windowToImageFilter->GetOutputPort());
     writer->Write();
 
-
-    //
     vtkSmartPointer<vtkCamera> t_camera=m_renderer->GetActiveCamera();
 
 
@@ -162,7 +181,6 @@ void Genesyndata::get_z_values(vtkRenderWindow*t_renderwin)
     float *zvalues = new float[t_width * t_height];
 
     t_renderwin->GetZbufferData(0,0,t_width-1,t_height-1,zvalues);
-    //vtkMatrix4x4*t_matrix= t_camera->GetProjectionTransformMatrix(t_width/t_height,nearclip,farclip);
 
     //rescale z from [0,1] to [-1,1]
     for (int i=0;i<t_width*t_height;i++){
@@ -173,6 +191,8 @@ void Genesyndata::get_z_values(vtkRenderWindow*t_renderwin)
     std::string depthfilename="./depth/"+filename+".bin";
     ofstream myFile(depthfilename.c_str(),ios::out | ios::binary);
     myFile.write((char*)zvalues,sizeof(float)*t_width*t_height);
+
+    delete zvalues;
 
 }
 
@@ -199,6 +219,25 @@ void Genesyndata::setqudraticlight(int value)
     m_light->SetAttenuationValues(0,0,float(value)/100);
 
 }
+
+void Genesyndata::setambient(int value)
+{
+    m_light->SetAmbientColor(value,value,value);
+
+}
+
+void Genesyndata::setdiffuse(int value)
+{
+    m_light->SetDiffuseColor(value,value,value);
+
+}
+
+void Genesyndata::setspecular(int value)
+{
+    m_light->SetSpecularColor(value,value,value);
+
+}
+
 
 
 Genesyndata::~Genesyndata(){}

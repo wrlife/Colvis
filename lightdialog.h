@@ -6,6 +6,7 @@
 
 
 class Genesyndata;
+class MainWindow;
 
 namespace Ui {
 class lightDialog;
@@ -20,6 +21,8 @@ public:
 
     void setscene(Genesyndata* t_scene);
 
+    void setwindow(MainWindow * m_window);
+
     ~lightDialog();
 
 private slots:
@@ -31,9 +34,16 @@ private slots:
 
     void on_radioButton_4_clicked();
 
+    void on_horizontalSlider_valueChanged(int value);
+
+    void on_horizontalSlider_2_valueChanged(int value);
+
+    void on_horizontalSlider_3_valueChanged(int value);
+
 private:
     Ui::lightDialog *ui;
     Genesyndata* m_scene;
+    MainWindow * m_window;
 
 };
 

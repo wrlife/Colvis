@@ -21,6 +21,8 @@ public:
     explicit MainWindow(QWidget *parent = 0);
     void addlight();
 
+    void movecamaround();
+
 
     ~MainWindow();
 

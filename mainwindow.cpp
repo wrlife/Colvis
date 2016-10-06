@@ -14,6 +14,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
     widget->GetRenderWindow()->AddRenderer( m_syndata->getrenderer() );
     m_lightdialog.setscene(m_syndata);
+    m_lightdialog.setwindow(this);
 
 }
 
@@ -75,16 +76,7 @@ void MainWindow::on_action_Load_camera_path_triggered()
     //Render file
     m_syndata->loadcamerapath(m_filemanager->getfile());
 
-    for (int i=0;i<m_syndata->get_num_cams();i++)
-    {
-
-        this->updatecamera();
-        QVTKWidget* widget = this->findChild<QVTKWidget*>("qvtk");
-        widget->GetRenderWindow()->Render();
-        m_syndata->get_z_values(widget->GetRenderWindow());
-    }
-
-
+    this->updatecamera();
 
 //    m_timer=new QTimer(this);
 
@@ -118,11 +110,6 @@ void MainWindow::addlight()
 
 
     m_syndata->addlight();
-
-  //  m_syndata->getrenderer()->LightFollowCameraOn();
-     //std::cout << "Originally there are " << m_originalLights->GetNumberOfItems() << " lights.";
-
-     //m_originalLights->GetNextItem()->SetLightTypeToHeadlight();
 }
 
 
@@ -137,5 +124,35 @@ void MainWindow::on_actionModify_triggered()
 {
     //m_syndata->modiflight();
     QVTKWidget* widget = this->findChild<QVTKWidget*>("qvtk");
-    m_syndata->get_z_values(widget->GetRenderWindow());
+    for (int i=0;i<m_syndata->get_num_cams();i++)
+    {
+        this->updatecamera();
+        this->movecamaround();
+
+    }
+}
+
+
+void MainWindow::movecamaround()
+{
+    QVTKWidget* widget = this->findChild<QVTKWidget*>("qvtk");
+
+    //m_syndata->get_z_values(widget->GetRenderWindow());
+    srand((unsigned)time(NULL));
+    float x,y,z;
+    float elevation,azimuth;
+    for (int i=0;i<50;i++)
+    {
+         x= static_cast <float> (rand()) / static_cast <float> (RAND_MAX)*2-1;
+         y= static_cast <float> (rand()) / static_cast <float> (RAND_MAX)*2-1;
+         z= static_cast <float> (rand()) / static_cast <float> (RAND_MAX)*2-1;
+
+         elevation= static_cast <float> (rand()) / static_cast <float> (RAND_MAX)*360;
+         azimuth= static_cast <float> (rand()) / static_cast <float> (RAND_MAX)*360;
+
+         m_syndata->get_z_values(widget->GetRenderWindow());
+         m_syndata->randomcampos(x,y,z,elevation,azimuth);
+         widget->GetRenderWindow()->Render();
+
+    }
 }
