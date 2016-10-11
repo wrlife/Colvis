@@ -5,6 +5,7 @@
 #include <vtkSmartPointer.h>
 #include <QString>
 #include <vtkSTLReader.h>
+#include <vtkPLYReader.h>
 
 class Filemanager
 {
@@ -24,6 +25,7 @@ private:
      vtkSmartPointer<vtkSTLReader> m_stl;
      vtkSmartPointer<vtkXMLPolyDataReader> m_camera;
      vtkSmartPointer<vtkPolyData> m_polydata;
+     vtkSmartPointer<vtkPLYReader> m_ply;
 
 };
 

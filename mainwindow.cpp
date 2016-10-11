@@ -34,7 +34,7 @@ void MainWindow::on_action_New_file_triggered()
     //Open file dialog
     QString filePath = QFileDialog::getOpenFileName(
                        this, tr("Open File"), "",
-                       tr("3Dmodels (*.stl *.vtp *.off)"));
+                       tr("3Dmodels (*.stl *.vtp *.off *.ply)"));
 
 
     if (filePath.isEmpty()){

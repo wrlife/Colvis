@@ -7,6 +7,8 @@ Filemanager::Filemanager()
     m_stl=vtkSmartPointer<vtkSTLReader>::New();
 
     m_camera=vtkSmartPointer<vtkXMLPolyDataReader>::New();
+
+    m_ply=vtkSmartPointer<vtkPLYReader>::New();
 }
 
 
@@ -23,6 +25,11 @@ void Filemanager::loadnewfile(QString filename)
         m_stl->SetFileName(filename.toStdString().c_str());
         m_stl->Update();
         m_polydata=m_stl->GetOutput();
+    }
+    else if(filename.endsWith("ply")){
+        m_ply->SetFileName(filename.toStdString().c_str());
+        m_ply->Update();
+        m_polydata=m_ply->GetOutput();
     }
 }
 
