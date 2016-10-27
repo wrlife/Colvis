@@ -52,7 +52,6 @@ Genesyndata::Genesyndata()
 
     m_renderer->AddActor(m_Actor);
 
-
     counter=0;
     totalcount=0;
 
@@ -92,27 +91,33 @@ void Genesyndata::loadcamerapath(vtkSmartPointer<vtkPolyData> t_model)
     //m_renderer->ResetCamera();
     m_camerapath=t_model;
     m_numcams=t_model->GetNumberOfPoints();
+
+    my_camera->setcam(m_camerapath);
 }
 
 
 //==================
 //Set current camera position and look at
 //==================
-void Genesyndata::updatecamera()
+void Genesyndata::updatecamera(int c_step)
 {
     //Get inital camera position
 
-    double p[3];
-    m_camerapath->GetPoint(counter,p);
+    double* p;
+    //m_camerapath->GetPoint(counter,p);
 
+    my_camera->updatepos(c_step);
+
+    p=my_camera->getcampos();
 
     vtkSmartPointer<vtkCamera> t_camera=m_renderer->GetActiveCamera();
     t_camera->SetPosition(p[0],p[1],p[2]);
 
-    m_camerapath->GetPoint(counter+1,p);  
+    p=my_camera->getcamdirection();
 
     t_camera->SetFocalPoint(p[0],p[1],p[2]);
-    counter++;
+    totalcount+=1;
+
 }
 
 

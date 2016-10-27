@@ -32,7 +32,7 @@ private slots:
 
     void on_action_Load_camera_path_triggered();
 
-    void updatecamera();
+    void updatecamera(int c_step);
 
     void on_action_Lighting_triggered();
 

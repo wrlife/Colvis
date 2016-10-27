@@ -13,6 +13,8 @@
 #include <vtkLight.h>
 #include <vtkLightActor.h>
 #include <vtkWindowToImageFilter.h>
+#include "mycamera.h"
+
 
 class Genesyndata
 {
@@ -32,7 +34,7 @@ public:
     int get_num_cams(){return m_numcams;}
 
 
-    void updatecamera();
+    void updatecamera(int c_step);
     void setconstantlight(int value);
     void setlinearlight(int value);
     void setqudraticlight(int value);
@@ -51,6 +53,8 @@ private:
     vtkSmartPointer<vtkRenderer> m_renderer;
     vtkSmartPointer<vtkPolyData> m_camerapath;
     vtkSmartPointer<vtkLightActor> m_lightActor;
+
+    Mycamera* my_camera=new Mycamera(40);
 
     int counter;
     int totalcount;

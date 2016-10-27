@@ -76,7 +76,7 @@ void MainWindow::on_action_Load_camera_path_triggered()
     //Render file
     m_syndata->loadcamerapath(m_filemanager->getfile());
 
-    this->updatecamera();
+    this->updatecamera(0);
 
 //    m_timer=new QTimer(this);
 
@@ -92,9 +92,9 @@ void MainWindow::on_action_Load_camera_path_triggered()
 //==================
 //Camera animation
 //==================
-void MainWindow::updatecamera()
+void MainWindow::updatecamera(int c_step)
 {
-    m_syndata->updatecamera();
+    m_syndata->updatecamera(c_step);
     QVTKWidget* widget = this->findChild<QVTKWidget*>("qvtk");
     widget->GetRenderWindow()->Render();
 
@@ -124,11 +124,14 @@ void MainWindow::on_actionModify_triggered()
 {
     //m_syndata->modiflight();
     QVTKWidget* widget = this->findChild<QVTKWidget*>("qvtk");
-    for (int i=0;i<m_syndata->get_num_cams();i++)
-    {
-        this->updatecamera();
-        this->movecamaround();
 
+    int stepsize=40;
+
+    for (int i=0;i<m_syndata->get_num_cams()*stepsize-2;i++)
+    {
+        this->updatecamera(i);
+        m_syndata->get_z_values(widget->GetRenderWindow());
+        //this->movecamaround();
     }
 }
 
@@ -137,7 +140,7 @@ void MainWindow::movecamaround()
 {
     QVTKWidget* widget = this->findChild<QVTKWidget*>("qvtk");
 
-    //m_syndata->get_z_values(widget->GetRenderWindow());
+    m_syndata->get_z_values(widget->GetRenderWindow());
     srand((unsigned)time(NULL));
     float x,y,z;
     float elevation,azimuth;
@@ -145,7 +148,7 @@ void MainWindow::movecamaround()
     {
          x= static_cast <float> (rand()) / static_cast <float> (RAND_MAX)*2-1;
          y= static_cast <float> (rand()) / static_cast <float> (RAND_MAX)*2-1;
-         z= static_cast <float> (rand()) / static_cast <float> (RAND_MAX)*2-1;
+         z= static_cast <float> (rand()) / static_cast <float> (RAND_MAX)*2-1;m_syndata->get_z_values(widget->GetRenderWindow());
 
          elevation= static_cast <float> (rand()) / static_cast <float> (RAND_MAX)*360;
          azimuth= static_cast <float> (rand()) / static_cast <float> (RAND_MAX)*360;
