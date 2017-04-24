@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>800</width>
-    <height>600</height>
+    <width>409</width>
+    <height>308</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -25,7 +25,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>800</width>
+     <width>409</width>
      <height>19</height>
     </rect>
    </property>
@@ -34,6 +34,7 @@
      <string>&amp;File</string>
     </property>
     <addaction name="action_New_file"/>
+    <addaction name="actionParametricBoy"/>
    </widget>
    <widget class="QMenu" name="menu_Tools">
     <property name="title">
@@ -78,6 +79,11 @@
   <action name="actionModify">
    <property name="text">
     <string>modify</string>
+   </property>
+  </action>
+  <action name="actionParametricBoy">
+   <property name="text">
+    <string>ParametricBoy</string>
    </property>
   </action>
  </widget>

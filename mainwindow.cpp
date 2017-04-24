@@ -125,14 +125,16 @@ void MainWindow::on_actionModify_triggered()
     //m_syndata->modiflight();
     QVTKWidget* widget = this->findChild<QVTKWidget*>("qvtk");
 
-    int stepsize=40;
+//    int stepsize=20;
 
-    for (int i=0;i<m_syndata->get_num_cams()*stepsize-2;i++)
-    {
-        this->updatecamera(i);
-        m_syndata->get_z_values(widget->GetRenderWindow());
-        //this->movecamaround();
-    }
+//    for (int i=0;i<m_syndata->get_num_cams()*stepsize-2;i++)
+//    {
+//        this->updatecamera(i);
+//        m_syndata->get_z_values(widget->GetRenderWindow());
+//        //this->movecamaround();
+//    }
+
+    m_syndata->get_orthognal_normal_view(m_syndata->getparametricdata(),widget->GetRenderWindow());
 }
 
 
@@ -158,4 +160,9 @@ void MainWindow::movecamaround()
          widget->GetRenderWindow()->Render();
 
     }
+}
+
+void MainWindow::on_actionParametricBoy_triggered()
+{
+    m_syndata->renderparametricmodel();
 }

@@ -14,7 +14,12 @@
 #include <vtkLightActor.h>
 #include <vtkWindowToImageFilter.h>
 #include "mycamera.h"
+#include <vtkParametricBoy.h>
+#include <vtkParametricFunctionSource.h>
 
+typedef struct {
+  double x, y, z;
+} mpoint;
 
 class Genesyndata
 {
@@ -33,6 +38,8 @@ public:
 
     int get_num_cams(){return m_numcams;}
 
+    vtkSmartPointer<vtkPolyData> getparametricdata() {return parametricFunctionSources->GetOutput();}
+
 
     void updatecamera(int c_step);
     void setconstantlight(int value);
@@ -42,6 +49,9 @@ public:
     void setdiffuse(int value);
     void setspecular(int value);
     void randomcampos(float x,float y,float z, float elevation,float azimuth);
+
+    void get_orthognal_normal_view(vtkSmartPointer<vtkPolyData> t_model, vtkRenderWindow *t_renderwin);
+    void renderparametricmodel();
 
 
 private:
@@ -54,7 +64,10 @@ private:
     vtkSmartPointer<vtkPolyData> m_camerapath;
     vtkSmartPointer<vtkLightActor> m_lightActor;
 
-    Mycamera* my_camera=new Mycamera(40);
+    vtkSmartPointer<vtkParametricBoy> parametricObjects;
+    vtkSmartPointer<vtkParametricFunctionSource> parametricFunctionSources;
+
+    Mycamera* my_camera=new Mycamera(20);
 
     int counter;
     int totalcount;

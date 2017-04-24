@@ -3,6 +3,7 @@
 #include <vtkCenterOfMass.h>
 #include <vtkProperty.h>
 #include <vtkPolyDataNormals.h>
+#include <vtkPointData.h>
 #include <vtkLightCollection.h>
 
 #include <vtkBMPWriter.h>
@@ -14,6 +15,13 @@
 #include <vtkFloatArray.h>
 #include <string>
 #include <sstream>
+#include <vtkCoordinate.h>
+
+
+#include <vtkImageCanvasSource2D.h>
+#include <vtkJPEGWriter.h>
+
+
 
 
 
@@ -41,9 +49,9 @@ Genesyndata::Genesyndata()
     m_light->SetAttenuationValues(0,0.2,0);
     m_light->SetPositional(true); // required for vtkLightActor below
     m_light->SetConeAngle(180);
-    m_light->SetDiffuseColor(100,100,100);
-    m_light->SetAmbientColor(100,100,100);
-    m_light->SetSpecularColor(100,100,100);
+    m_light->SetDiffuseColor(50,50,50);
+    m_light->SetAmbientColor(10,10,10);
+    m_light->SetSpecularColor(50,50,50);
     m_light->SetLightTypeToHeadlight();
 
     //Renderer
@@ -63,7 +71,6 @@ Genesyndata::Genesyndata()
 void Genesyndata::rendermodel(vtkSmartPointer<vtkPolyData> t_model)
 {
 
-
     // calculate normals
      vtkSmartPointer<vtkPolyDataNormals> normalGenerator = vtkSmartPointer<vtkPolyDataNormals>::New();
      normalGenerator->SetInputData(t_model);
@@ -71,15 +78,35 @@ void Genesyndata::rendermodel(vtkSmartPointer<vtkPolyData> t_model)
      normalGenerator->ComputeCellNormalsOn();
      normalGenerator->Update();
 
-     t_model = normalGenerator->GetOutput();
+     t_model->DeepCopy( normalGenerator->GetOutput());
 
+     m_Mapper->SetInputData(t_model);
 
-    m_Mapper->SetInputData(t_model);
+     m_renderer->ResetCamera();
+
+}
+
+//==================
+//Render 3D parametric model
+//==================
+void Genesyndata::renderparametricmodel()
+{
+
+    parametricObjects = vtkSmartPointer<vtkParametricBoy>::New();
+    parametricFunctionSources= vtkSmartPointer<vtkParametricFunctionSource>::New();
+
+    parametricFunctionSources->SetParametricFunction(parametricObjects);
+    parametricFunctionSources->SetUResolution(51);
+    parametricFunctionSources->SetVResolution(51);
+    parametricFunctionSources->SetWResolution(51);
+    parametricFunctionSources->Update();
+
+    m_Mapper->SetInputConnection(parametricFunctionSources->GetOutputPort());
 
     m_renderer->ResetCamera();
 
-
 }
+
 
 
 //==================
@@ -93,7 +120,10 @@ void Genesyndata::loadcamerapath(vtkSmartPointer<vtkPolyData> t_model)
     m_numcams=t_model->GetNumberOfPoints();
 
     my_camera->setcam(m_camerapath);
+
 }
+
+
 
 
 //==================
@@ -202,6 +232,111 @@ void Genesyndata::get_z_values(vtkRenderWindow*t_renderwin)
     delete zvalues;
 
 }
+
+
+//===============
+// Obtain points where viewing ray is perpendicular to surface normal
+//===============
+void Genesyndata::get_orthognal_normal_view(vtkSmartPointer<vtkPolyData> t_model,vtkRenderWindow*t_renderwin)
+{
+    double* cp;
+    vtkSmartPointer<vtkCamera> t_camera=m_renderer->GetActiveCamera();
+    cp = t_camera->GetPosition();
+
+    vtkFloatArray* normalDataFloat =
+      vtkFloatArray::SafeDownCast(t_model->GetPointData()->GetArray("Normals"));
+
+
+    //Compute dot product
+
+
+    std::vector<mpoint> contour;
+    if(normalDataFloat)
+    {
+
+        for(vtkIdType i = 0; i < normalDataFloat->GetNumberOfTuples(); i++)
+        {
+          double p[3];
+          double NV[3];
+          double NS[3];
+          normalDataFloat->GetTuple(i, NS);
+
+          t_model->GetPoint(i,p);
+
+          //view normal
+          NV[0]=cp[0]-p[0];
+          NV[1]=cp[1]-p[1];
+          NV[2]=cp[2]-p[2];
+
+
+          //dot product between NV and NS
+          int NV_dot_NS = NV[0]*NS[0]+NV[1]*NS[1]+NV[2]*NS[2];
+
+
+          if(std::abs(NV_dot_NS)<0.0001)
+          {
+              mpoint temppoint;
+              temppoint.x=p[0];
+              temppoint.y=p[1];
+              temppoint.z=p[2];
+              contour.push_back(temppoint);
+          }
+
+        }
+
+        vtkSmartPointer<vtkCoordinate> coordinate =
+          vtkSmartPointer<vtkCoordinate>::New();
+
+        coordinate->SetCoordinateSystemToWorld();
+
+        //Draw those points on a image
+
+
+
+        int * t_sz=t_renderwin->GetSize();
+        int t_width=t_sz[0];
+        int t_height=t_sz[1];
+
+        int extent[6] = {0,t_width,0,t_height,0,0};
+
+        vtkSmartPointer<vtkImageCanvasSource2D> imageSource =
+          vtkSmartPointer<vtkImageCanvasSource2D>::New();
+        imageSource->SetExtent( extent );
+        imageSource->SetScalarTypeToUnsignedChar(); // vtkJPEGWriter only accepts unsigned char input
+        imageSource->SetNumberOfScalarComponents( 3 ); // 3 color channels: Red, Green and Blue
+
+        imageSource->SetDrawColor(0.0, 0.0, 0.0);
+        imageSource->FillBox(extent[0],extent[1],extent[2],extent[3]);
+
+
+        imageSource->SetDrawColor( 0, 127, 255 );
+
+
+        for(int i=0;i<contour.size();i++)
+        {
+
+          coordinate->SetValue(contour[i].x,contour[i].y,contour[i].z);
+          int* val;
+          val = coordinate->GetComputedDisplayValue(m_renderer);
+
+          imageSource->DrawPoint(val[0],val[1]);
+
+
+        }
+
+        std::string outputFilename = "output.jpg";
+        vtkSmartPointer<vtkJPEGWriter> writer =
+          vtkSmartPointer<vtkJPEGWriter>::New();
+        writer->SetFileName( outputFilename.c_str() );
+        writer->SetInputConnection( imageSource->GetOutputPort() );
+        writer->Write();
+
+
+    }
+
+
+}
+
 
 
 void Genesyndata::addlight()

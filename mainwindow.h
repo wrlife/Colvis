@@ -38,6 +38,8 @@ private slots:
 
     void on_actionModify_triggered();
 
+    void on_actionParametricBoy_triggered();
+
 private:
     Ui::MainWindow *ui;
     Filemanager * m_filemanager;
