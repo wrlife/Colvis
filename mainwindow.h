@@ -23,6 +23,7 @@ public:
 
     void movecamaround();
 
+    Genesyndata* m_syndata;
 
     ~MainWindow();
 
@@ -44,7 +45,7 @@ private:
     Ui::MainWindow *ui;
     Filemanager * m_filemanager;
     //Start Generate synthetic data
-    Genesyndata* m_syndata;
+
     QTimer *m_timer;
 
     lightDialog m_lightdialog;

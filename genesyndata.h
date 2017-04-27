@@ -17,6 +17,17 @@
 #include <vtkParametricBoy.h>
 #include <vtkParametricFunctionSource.h>
 
+#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/imgproc/imgproc.hpp"
+#include <iostream>
+#include <stdio.h>
+#include <stdlib.h>
+
+
+
+using namespace cv;
+using namespace std;
+
 typedef struct {
   double x, y, z;
 } mpoint;
@@ -53,6 +64,9 @@ public:
     void get_orthognal_normal_view(vtkSmartPointer<vtkPolyData> t_model, vtkRenderWindow *t_renderwin);
     void renderparametricmodel();
 
+    void edgedetection(std::string filename);
+    std::vector< double > computeCurvature(std::vector<cv::Point> vecContourPoints, int step);
+
 
 private:
      vtkSmartPointer<vtkSphereSource> m_sphereSource;
@@ -72,6 +86,9 @@ private:
     int counter;
     int totalcount;
     int m_numcams;
+
+    int t_width;
+    int t_height;
 
 
 };

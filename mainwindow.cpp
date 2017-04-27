@@ -1,5 +1,16 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
+#include <vtkCallbackCommand.h>
+#include <vtkCommand.h>
+
+
+
+
+void KeypressCallbackFunction (
+  vtkObject* caller,
+  long unsigned int eventId,
+  void* clientData,
+  void* callData );
 
 
 MainWindow::MainWindow(QWidget *parent) :
@@ -165,4 +176,29 @@ void MainWindow::movecamaround()
 void MainWindow::on_actionParametricBoy_triggered()
 {
     m_syndata->renderparametricmodel();
+
+    vtkSmartPointer<vtkCallbackCommand> keypressCallback =
+      vtkSmartPointer<vtkCallbackCommand>::New();
+    keypressCallback->SetCallback ( KeypressCallbackFunction );
+    keypressCallback->SetClientData(this);
+
+    QVTKWidget* widget = this->findChild<QVTKWidget*>("qvtk");
+
+    widget->GetRenderWindow()->GetInteractor()->AddObserver ( vtkCommand::KeyPressEvent, keypressCallback );
+    std::cout<<"call back"<<std::endl;
+
 }
+
+
+void KeypressCallbackFunction ( vtkObject* caller, long unsigned int vtkNotUsed(eventId), void* clientData, void* vtkNotUsed(callData) )
+{
+
+    MainWindow* t_window =
+      static_cast<MainWindow*>(clientData);
+    QVTKWidget* widget = t_window->findChild<QVTKWidget*>("qvtk");
+    t_window->m_syndata->get_orthognal_normal_view(t_window->m_syndata->getparametricdata(),widget->GetRenderWindow());
+
+    //std::cout<<"call back"<<std::endl;
+
+}
+
