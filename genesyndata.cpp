@@ -43,6 +43,8 @@
 #include <vtkPolyDataMapper.h>
 #include <vtkImageLuminance.h>
 #include <vtkProperty.h>
+#include <math.h>
+
 
 
 
@@ -469,6 +471,7 @@ void Genesyndata::edgedetection(std::string filename)
             largestcontour=contours[i].size();
             largestcontourid = i;
         }
+
     }
 
     drawContours( drawing, contours, largestcontourid, color, 1, 8, hierarchy, 0, Point() );
@@ -479,8 +482,13 @@ void Genesyndata::edgedetection(std::string filename)
     imshow( "Contours", drawing );
 
 
+    //Find out corner points in the contour
+
+
+
     vector< double > vecCurvature;
-    vecCurvature=computeCurvature(contours[largestcontourid],20);
+    vector<int> cornerindex;
+    vecCurvature=computeCurvature(contours[largestcontourid],20,&cornerindex,40);
 
 
     //Draw those points on a image
@@ -519,6 +527,12 @@ void Genesyndata::edgedetection(std::string filename)
 
     }
 
+    for(int i = 0;i<cornerindex.size();i++)
+    {
+        //imageSource->SetDrawColor( 255, 0, 0 );
+        //imageSource->DrawPoint(contours[largestcontourid][cornerindex[i]].x,contours[largestcontourid][cornerindex[i]].y);
+    }
+
     vtkSmartPointer<vtkPNGWriter> writer =
       vtkSmartPointer<vtkPNGWriter>::New();
 
@@ -531,7 +545,7 @@ void Genesyndata::edgedetection(std::string filename)
 
 }
 
-vector< double > Genesyndata::computeCurvature(vector<Point> vecContourPoints,int step)
+vector< double > Genesyndata::computeCurvature(vector<Point> vecContourPoints,int step, vector<int> *cornerindex,int minAngle)
 {
     std::vector< double > vecCurvature( vecContourPoints.size() );
 
@@ -546,6 +560,33 @@ vector< double > Genesyndata::computeCurvature(vector<Point> vecContourPoints,in
       if (isClosed)
       {
           cout<<"contourclose"<<endl;
+      }
+
+
+
+      //Find out corner points
+
+      for (int i = 0; i < vecContourPoints.size(); i++ )
+      {
+          int iminus = i-5;
+          int iplus = i+5;
+          const cv::Point2f& pos = vecContourPoints[i];
+
+          cv::Point2f pminus_corner = vecContourPoints[iminus < 0 ? iminus + vecContourPoints.size() : iminus];
+          cv::Point2f pplus_corner = vecContourPoints[iplus > vecContourPoints.size() ? iplus - vecContourPoints.size() : iplus];
+
+          //Calculate angle between current and previous point
+          double previousAngle = abs(atan2( pos.y - pminus_corner.y, pos.x - pminus_corner.x ) * 180 / M_PI);
+          double currentAngle = abs(atan2( pplus_corner.y-pos.y, pplus_corner.x-pos.x ) * 180 / M_PI);
+
+          double diffangle = abs(previousAngle-currentAngle);
+
+          cout<<diffangle<<endl;
+
+          if (diffangle>minAngle)
+          {
+            cornerindex->push_back(i);
+          }
       }
 
 
@@ -566,21 +607,33 @@ vector< double > Genesyndata::computeCurvature(vector<Point> vecContourPoints,in
                 }
             }
 
-
 //          int iminus = i-maxStep;
 //          int iplus = i+maxStep;
-
+          int iminus;
+          int iplus;
           for(int j=1;j<4;j++)
           {
-              int iminus = i-maxStep*j;
-              int iplus = i+maxStep*j;
-
+              iminus = i-maxStep*j;
+              iplus = i+maxStep*j;
               pminus.push_back( vecContourPoints[iminus < 0 ? iminus + vecContourPoints.size() : iminus]);
               pplus.push_back( vecContourPoints[iplus > vecContourPoints.size() ? iplus - vecContourPoints.size() : iplus]);
 
 
 
           }
+
+          int hascorner=0;
+          //Check if corner points are within neighbor
+          for(int u=0;u<cornerindex->size();u++)
+          {
+              if(iminus<(*cornerindex)[u]&&iplus>(*cornerindex)[u])
+              {
+                  hascorner=1;
+                  break;
+              }
+          }
+
+
 
            //cout<<pplus[2].x<<" "<<pplus[1].x<< " "<<pplus[0].x<<endl;
 
@@ -607,7 +660,10 @@ vector< double > Genesyndata::computeCurvature(vector<Point> vecContourPoints,in
 
           vecCurvature[i] = curvature2D;
 
-          //cout<<"curvature: "<<curvature2D<<endl;
+          if(hascorner)
+          {
+              vecCurvature[i]=0;
+          }
 
 
       }
@@ -620,7 +676,7 @@ vector< double > Genesyndata::computeCurvature(vector<Point> vecContourPoints,in
 
 void Genesyndata::addlight()
 {
-    m_renderer->AddLight(m_light);
+    //m_renderer->AddLight(m_light);
 }
 
 void Genesyndata::setconstantlight(int value)

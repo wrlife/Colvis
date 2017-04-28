@@ -65,7 +65,7 @@ public:
     void renderparametricmodel();
 
     void edgedetection(std::string filename);
-    std::vector< double > computeCurvature(std::vector<cv::Point> vecContourPoints, int step);
+    std::vector< double > computeCurvature(std::vector<cv::Point> vecContourPoints, int step, vector<int> *cornerindex, int minAngle);
 
 
 private:
