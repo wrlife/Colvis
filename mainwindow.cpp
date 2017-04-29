@@ -145,7 +145,8 @@ void MainWindow::on_actionModify_triggered()
 //        //this->movecamaround();
 //    }
 
-    m_syndata->get_orthognal_normal_view(m_syndata->getparametricdata(),widget->GetRenderWindow());
+    //m_syndata->get_orthognal_normal_view(m_syndata->getparametricdata(),widget->GetRenderWindow());
+    m_syndata->get_orthognal_normal_view(m_filemanager->getfile(),widget->GetRenderWindow());
 }
 
 
