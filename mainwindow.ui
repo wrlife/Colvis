@@ -16,7 +16,7 @@
   <widget class="QWidget" name="centralWidget">
    <layout class="QHBoxLayout" name="horizontalLayout">
     <item>
-     <widget class="QVTKWidget" name="qvtk"/>
+     <widget class="QVTKWidget" name="qvtk" native="true"/>
     </item>
    </layout>
   </widget>
@@ -26,7 +26,7 @@
      <x>0</x>
      <y>0</y>
      <width>409</width>
-     <height>19</height>
+     <height>20</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -43,6 +43,7 @@
     <addaction name="action_Load_camera_path"/>
     <addaction name="action_Lighting"/>
     <addaction name="actionModify"/>
+    <addaction name="actionAnalyse_contour"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menu_Tools"/>
@@ -84,6 +85,11 @@
   <action name="actionParametricBoy">
    <property name="text">
     <string>ParametricBoy</string>
+   </property>
+  </action>
+  <action name="actionAnalyse_contour">
+   <property name="text">
+    <string>Analyse contour</string>
    </property>
   </action>
  </widget>

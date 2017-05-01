@@ -24,6 +24,7 @@ public:
     void movecamaround();
 
     Genesyndata* m_syndata;
+    Filemanager * m_filemanager;
 
     ~MainWindow();
 
@@ -41,9 +42,11 @@ private slots:
 
     void on_actionParametricBoy_triggered();
 
+    void on_actionAnalyse_contour_triggered();
+
 private:
     Ui::MainWindow *ui;
-    Filemanager * m_filemanager;
+
     //Start Generate synthetic data
 
     QTimer *m_timer;

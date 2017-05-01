@@ -7,6 +7,9 @@
 #include <vtkSTLReader.h>
 #include <vtkPLYReader.h>
 
+#include <vtkParametricBoy.h>
+#include <vtkParametricFunctionSource.h>
+
 class Filemanager
 {
 public:
@@ -17,6 +20,8 @@ public:
 
     void loadnewcamera(QString filename);
 
+    void renderparametricmodel();
+
     vtkSmartPointer<vtkPolyData> getfile() {return m_polydata;}
 
 
@@ -26,6 +31,9 @@ private:
      vtkSmartPointer<vtkXMLPolyDataReader> m_camera;
      vtkSmartPointer<vtkPolyData> m_polydata;
      vtkSmartPointer<vtkPLYReader> m_ply;
+
+     vtkSmartPointer<vtkParametricBoy> parametricObjects;
+     vtkSmartPointer<vtkParametricFunctionSource> parametricFunctionSources;
 
 };
 

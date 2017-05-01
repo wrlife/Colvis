@@ -34,11 +34,32 @@ void Filemanager::loadnewfile(QString filename)
 }
 
 
+
 void Filemanager::loadnewcamera(QString filename)
 {
     m_camera->SetFileName(filename.toStdString().c_str());
     m_camera->Update();
     m_polydata=m_camera->GetOutput();
+}
+
+
+//==================
+//Render 3D parametric model
+//==================
+void Filemanager::renderparametricmodel()
+{
+
+    parametricObjects = vtkSmartPointer<vtkParametricBoy>::New();
+    parametricFunctionSources= vtkSmartPointer<vtkParametricFunctionSource>::New();
+
+    parametricFunctionSources->SetParametricFunction(parametricObjects);
+    parametricFunctionSources->SetUResolution(101);
+    parametricFunctionSources->SetVResolution(101);
+    parametricFunctionSources->SetWResolution(101);
+    parametricFunctionSources->Update();
+
+    m_polydata = parametricFunctionSources->GetOutput();
+
 }
 
 Filemanager::~Filemanager()

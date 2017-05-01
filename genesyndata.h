@@ -14,8 +14,7 @@
 #include <vtkLightActor.h>
 #include <vtkWindowToImageFilter.h>
 #include "mycamera.h"
-#include <vtkParametricBoy.h>
-#include <vtkParametricFunctionSource.h>
+
 
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
@@ -49,7 +48,6 @@ public:
 
     int get_num_cams(){return m_numcams;}
 
-    vtkSmartPointer<vtkPolyData> getparametricdata() {return parametricFunctionSources->GetOutput();}
 
 
     void updatecamera(int c_step);
@@ -62,10 +60,16 @@ public:
     void randomcampos(float x,float y,float z, float elevation,float azimuth);
 
     void get_orthognal_normal_view(vtkSmartPointer<vtkPolyData> t_model, vtkRenderWindow *t_renderwin);
-    void renderparametricmodel();
+
 
     void edgedetection(std::string filename);
     std::vector< double > computeCurvature(std::vector<cv::Point> vecContourPoints, int step, vector<int> *cornerindex, int minAngle);
+
+    void postprocessCurvature(Mat *imageSource,vector<Point>contour);
+
+    void coloronsurface(vtkSmartPointer<vtkPolyData> outputPolyData, double contourcolor[3], double surfacecolor[3]);
+
+    void assignColorAttribute(vtkSmartPointer<vtkPolyData> outputPolyData);
 
 
 private:
@@ -78,8 +82,7 @@ private:
     vtkSmartPointer<vtkPolyData> m_camerapath;
     vtkSmartPointer<vtkLightActor> m_lightActor;
 
-    vtkSmartPointer<vtkParametricBoy> parametricObjects;
-    vtkSmartPointer<vtkParametricFunctionSource> parametricFunctionSources;
+
 
     Mycamera* my_camera=new Mycamera(20);
 
@@ -89,6 +92,10 @@ private:
 
     int t_width;
     int t_height;
+
+
+    Mat imageSource;
+    vector<Point> m_contour;
 
 
 };

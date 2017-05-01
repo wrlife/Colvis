@@ -71,7 +71,7 @@ Genesyndata::Genesyndata()
     m_light->SetPositional(true); // required for vtkLightActor below
     m_light->SetConeAngle(180);
     m_light->SetDiffuseColor(50,50,50);
-    m_light->SetAmbientColor(10,10,10);
+    m_light->SetAmbientColor(1,1,1);
     m_light->SetSpecularColor(50,50,50);
     m_light->SetLightTypeToHeadlight();
 
@@ -105,28 +105,12 @@ void Genesyndata::rendermodel(vtkSmartPointer<vtkPolyData> t_model)
 
      m_renderer->ResetCamera();
 
-}
-
-//==================
-//Render 3D parametric model
-//==================
-void Genesyndata::renderparametricmodel()
-{
-
-    parametricObjects = vtkSmartPointer<vtkParametricBoy>::New();
-    parametricFunctionSources= vtkSmartPointer<vtkParametricFunctionSource>::New();
-
-    parametricFunctionSources->SetParametricFunction(parametricObjects);
-    parametricFunctionSources->SetUResolution(51);
-    parametricFunctionSources->SetVResolution(51);
-    parametricFunctionSources->SetWResolution(51);
-    parametricFunctionSources->Update();
-
-    m_Mapper->SetInputConnection(parametricFunctionSources->GetOutputPort());
-
-    m_renderer->ResetCamera();
+     //Project and draw onto 3D surface
+     assignColorAttribute(t_model);
 
 }
+
+
 
 
 
@@ -417,14 +401,156 @@ void Genesyndata::get_orthognal_normal_view(vtkSmartPointer<vtkPolyData> t_model
         //Opencv edge detection
         edgedetection(filename);
 
-        //Find inflection of the contour point
+
+        //Color convex points
+
+        double contourcolor[3],surfacecolor[3];
+        contourcolor[0]=255;contourcolor[1]=0;contourcolor[2]=0;
+        surfacecolor[0]=0;surfacecolor[1]=0;surfacecolor[2]=255;
+        coloronsurface(t_model,contourcolor,surfacecolor);
+
+        //Color concave points
+        contourcolor[0]=255;contourcolor[1]=255;contourcolor[2]=255;
+        surfacecolor[0]=0;surfacecolor[1]=255;surfacecolor[2]=0;
+        coloronsurface(t_model,contourcolor,surfacecolor);
+
+        //Color parabolic points
+
+        contourcolor[0]=255;contourcolor[1]=255;contourcolor[2]=0;
+        surfacecolor[0]=255;surfacecolor[1]=0;surfacecolor[2]=0;
+        coloronsurface(t_model,contourcolor,surfacecolor);
 
 
 
 
+}
+
+void Genesyndata::assignColorAttribute(vtkSmartPointer<vtkPolyData> outputPolyData){
+    vtkSmartPointer<vtkUnsignedCharArray> colors =
+      vtkSmartPointer<vtkUnsignedCharArray>::New();
+    colors->SetNumberOfComponents(3);
+    colors->SetName("Colors");
+    for(int i = 0; i < outputPolyData->GetNumberOfPoints(); i++)
+      {
+      double p[3];
+      outputPolyData->GetPoint(i,p);
+
+      unsigned char color[3];
+      color[0]=255;
+      color[1]=255;
+      color[2]=255;
+
+      colors->InsertNextTupleValue(color);
+      }
+
+      outputPolyData->GetPointData()->SetScalars(colors);
+}
+
+
+void Genesyndata::coloronsurface(vtkSmartPointer<vtkPolyData> outputPolyData,double contourcolor[3],double surfacecolor[3])
+{
+
+
+    double color[3];
 
 
 
+    for(int i = 0; i < m_contour.size(); i++){
+
+        Vec3b tmpcolor = imageSource.at<Vec3b>(Point(m_contour[i].x, m_contour[i].y));
+        if(tmpcolor[0]==contourcolor[0]&&tmpcolor[1]==contourcolor[1]&&tmpcolor[2]==contourcolor[2]){
+            color[0]=surfacecolor[0];
+            color[1]=surfacecolor[1];
+            color[2]=surfacecolor[2];
+
+            //===================
+            //Find closest point in 3D
+            //====================
+            // Create the tree
+            vtkSmartPointer<vtkCellLocator> cellLocator =
+              vtkSmartPointer<vtkCellLocator>::New();
+            cellLocator->SetDataSet(outputPolyData);
+            cellLocator->BuildLocator();
+            vtkSmartPointer<vtkPolygonalSurfacePointPlacer> mplacer = vtkSmartPointer<vtkPolygonalSurfacePointPlacer>::New();
+            mplacer->AddProp(m_Actor);
+
+            double pixel[2];
+
+            int * t_sz = m_renderer->GetSize();
+            t_width=t_sz[0];
+            t_height=t_sz[1];
+            pixel[0]=m_contour[i].x;
+            pixel[1]=t_height-m_contour[i].y;
+
+            double world[3];
+            double worldOrient[9];
+
+            mplacer->ComputeWorldPosition(m_renderer,pixel,world,worldOrient);
+
+           // std::cout << "World coordinate: " << world[0] << ", " << world[1] << ", " << world[2] << std::endl;
+
+
+            double closestPoint[3];//the coordinates of the closest point will be returned here
+            double closestPointDist2; //the squared distance to the closest point will be returned here
+            vtkIdType cellId; //the cell id of the cell containing the closest point will be returned here
+            int subId; //this is rarely used (in triangle strips only, I believe)
+            cellLocator->FindClosestPoint(world, closestPoint, cellId, subId, closestPointDist2);
+            vtkSmartPointer<vtkIdList> cellPointIds =
+              vtkSmartPointer<vtkIdList>::New();
+            outputPolyData->GetCellPoints(cellId, cellPointIds);
+
+
+            //view normal
+
+            double* cp;
+            double NV[3],NV_dot_NS[3];
+            vtkSmartPointer<vtkCamera> t_camera=m_renderer->GetActiveCamera();
+            cp = t_camera->GetPosition();
+            NV[0]=cp[0]-world[0];
+            NV[1]=cp[1]-world[1];
+            NV[2]=cp[2]-world[2];
+
+            //Distance to each point
+            double NSS[3][3];
+            double smallestdot;
+            int perpcellid;
+            double dist[3];
+
+            vtkFloatArray* normalDataFloat =
+              vtkFloatArray::SafeDownCast(outputPolyData->GetPointData()->GetArray("Normals"));
+
+            for(vtkIdType j = 0; j < cellPointIds->GetNumberOfIds(); j++)
+            {
+                double p[3];
+                outputPolyData->GetPoint(cellPointIds->GetId(j),p);
+
+                dist[j] = sqrt((p[0]-world[0])*(p[0]-world[0])+(p[1]-world[1])*(p[1]-world[1])+(p[2]-world[2])*(p[2]-world[2]));
+
+                normalDataFloat->GetTuple(cellPointIds->GetId(j), NSS[j]);
+                NV_dot_NS[j] = NV[0]*NSS[j][0]+NV[1]*NSS[j][1]+NV[2]*NSS[j][2];
+                if(j==0)
+                {
+                    smallestdot=dist[j];//NV_dot_NS[j];
+                    perpcellid=j;
+                }
+                else if(NV_dot_NS[j]<smallestdot)
+                {
+                    smallestdot = dist[j];//NV_dot_NS[j];
+                    perpcellid=j;
+                }
+
+            }
+             outputPolyData->GetPointData()->GetScalars()->SetTuple3(cellPointIds->GetId(perpcellid),color[0],color[1],color[2]);
+        }
+
+
+    }
+
+
+    outputPolyData->Modified();
+    outputPolyData->GetPointData()->Modified();
+
+    outputPolyData->GetPointData()->GetScalars()->Modified();
 
 }
 
@@ -439,9 +565,21 @@ void Genesyndata::edgedetection(std::string filename)
     /// Convert image to gray and blur it
     cvtColor( src, src_gray, CV_BGR2GRAY );
 
-    threshold( src_gray, binary, 10, 255,THRESH_BINARY|THRESH_BINARY );
+    threshold( src_gray, binary, 5, 255,THRESH_BINARY|THRESH_BINARY );
 
-    imshow( "Contours", binary );
+
+    int erosion_type;
+    int erosion_size = 3;
+    erosion_type = MORPH_ELLIPSE;
+    Mat element = getStructuringElement( erosion_type,
+                                         Size( 2*erosion_size + 1, 2*erosion_size+1 ),
+                                         Point( erosion_size, erosion_size ) );
+
+    /// Apply the erosion operation
+    dilate( binary, binary, element );
+    erode(binary,binary,element);
+
+    imwrite( "binary.png", binary );
 
     blur( src_gray, src_gray, Size(3,3) );
 
@@ -454,7 +592,8 @@ void Genesyndata::edgedetection(std::string filename)
     /// Detect edges using canny
     Canny( binary, canny_output, thresh, thresh*2, 3 );
     /// Find contours
-    findContours( canny_output, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_NONE, Point(0, 0) );
+    findContours( canny_output, contours, hierarchy, CV_RETR_CCOMP, CV_CHAIN_APPROX_NONE, Point(0, 0) );
+
 
     /// Draw contours
     Mat drawing = Mat::zeros( canny_output.size(), CV_8UC3 );
@@ -474,80 +613,135 @@ void Genesyndata::edgedetection(std::string filename)
 
     }
 
-    drawContours( drawing, contours, largestcontourid, color, 1, 8, hierarchy, 0, Point() );
+    if(hierarchy[largestcontourid][2] == -1)
+    {
+        return;
+    }
+
+    //drawContours( drawing, contours, largestcontourid, color, 1, 8, hierarchy, 0, Point() );
 
 
-    /// Show in a window
-    namedWindow( "Contours", CV_WINDOW_AUTOSIZE );
-    imshow( "Contours", drawing );
 
 
+
+    //==================================
     //Find out corner points in the contour
-
-
-
+    //====================================
     vector< double > vecCurvature;
     vector<int> cornerindex;
-    vecCurvature=computeCurvature(contours[largestcontourid],20,&cornerindex,40);
+    vecCurvature=computeCurvature(contours[largestcontourid],30,&cornerindex,30);
 
 
     //Draw those points on a image
 
     int extent[6] = {0,t_width,0,t_height,0,0};
 
-    vtkSmartPointer<vtkImageCanvasSource2D> imageSource =
-      vtkSmartPointer<vtkImageCanvasSource2D>::New();
-    imageSource->SetExtent( extent );
-    imageSource->SetScalarTypeToUnsignedChar(); // vtkJPEGWriter only accepts unsigned char input
-    imageSource->SetNumberOfScalarComponents( 3 ); // 3 color channels: Red, Green and Blue
 
-    imageSource->SetDrawColor(0.0, 0.0, 0.0);
-    imageSource->FillBox(extent[0],extent[1],extent[2],extent[3]);
-
-
+    imageSource = Mat(t_width,t_height, CV_8UC3, cvScalar(0,0,0));
 
     for(int i=0;i<contours[largestcontourid].size();i++)
     {
         if (vecCurvature[i]<0)
         {
-            imageSource->SetDrawColor( 0, 127, 255 );
-            imageSource->DrawPoint(contours[largestcontourid][i].x,contours[largestcontourid][i].y);
-        }
-        if (vecCurvature[i]>0)
-        {
-            imageSource->SetDrawColor( 255, 255, 255 );
-            imageSource->DrawPoint(contours[largestcontourid][i].x,contours[largestcontourid][i].y);
+
+            imageSource.at<Vec3b>(Point(contours[largestcontourid][i].x, contours[largestcontourid][i].y))[0]=255;
 
         }
-        if (vecCurvature[i]==0)
+        if (vecCurvature[i]>0&&vecCurvature[i]!=std::numeric_limits<double>::infinity())
         {
-            imageSource->SetDrawColor( 255, 0, 0 );
-            imageSource->DrawPoint(contours[largestcontourid][i].x,contours[largestcontourid][i].y);
-        }
-        if (vecCurvature[i]==std::numeric_limits<double>::infinity())
-        {
-            imageSource->SetDrawColor( 0, 255, 0 );
-            imageSource->DrawPoint(contours[largestcontourid][i].x,contours[largestcontourid][i].y);
+
+            imageSource.at<Vec3b>(Point(contours[largestcontourid][i].x, contours[largestcontourid][i].y))[0]=255;
+            imageSource.at<Vec3b>(Point(contours[largestcontourid][i].x, contours[largestcontourid][i].y))[1]=255;
+            imageSource.at<Vec3b>(Point(contours[largestcontourid][i].x, contours[largestcontourid][i].y))[2]=255;
+
         }
 
     }
 
     for(int i = 0;i<cornerindex.size();i++)
     {
-        //imageSource->SetDrawColor( 255, 0, 0 );
-        //imageSource->DrawPoint(contours[largestcontourid][cornerindex[i]].x,contours[largestcontourid][cornerindex[i]].y);
+
+        imageSource.at<Vec3b>(Point(contours[largestcontourid][cornerindex[i]].x,contours[largestcontourid][cornerindex[i]].y))[2]=255;
     }
 
-    vtkSmartPointer<vtkPNGWriter> writer =
-      vtkSmartPointer<vtkPNGWriter>::New();
 
-    std::string mfilename = "test.png";
-    writer->SetFileName(mfilename.c_str());
-    writer->SetInputConnection(imageSource->GetOutputPort());
-    writer->Write();
+    postprocessCurvature(&imageSource,contours[largestcontourid]);
+
+    m_contour = contours[largestcontourid];
+
+    // Show in a window
+    namedWindow( "Contours", CV_WINDOW_AUTOSIZE );
+    imshow( "Contours", imageSource );
 
 
+}
 
+void Genesyndata::postprocessCurvature(Mat *imageSource,vector<Point> contours)
+{
+    //Filter out noisy curvature
+    int kernalsize = 10;
+
+    Vec3b color;
+
+    for(int i=0; i<contours.size();i++)
+    {
+        int concavecount=0;
+        int convexcount=0;
+        color = imageSource->at<Vec3b>(Point(contours[i].x, contours[i].y));
+        if(color[0] ==0&&color[1]==0&&color[2]==255)
+        {
+            continue;
+        }
+        for(int j=1;j<kernalsize;j++)
+        {
+
+            int iminus = i-j;
+            iminus = iminus < 0 ? iminus + contours.size() : iminus;
+            int iplus = i+j;
+            iplus = iplus > contours.size() ? iplus - contours.size() : iplus;
+
+            color = imageSource->at<Vec3b>(Point(contours[iminus].x, contours[iminus].y));
+            if(color[0]==255&&color[1]==0&&color[2]==0)
+            {
+                convexcount+=1;
+            }
+            else if (color[0]==255&&color[1]==255&&color[2]==255)
+            {
+                concavecount+=1;
+            }
+            color = imageSource->at<Vec3b>(Point(contours[iplus].x, contours[iplus].y));
+            if(color[0]==255&&color[1]==0&&color[2]==0)
+            {
+                convexcount+=1;
+            }
+            else if (color[0]==255&&color[1]==255&&color[2]==255)
+            {
+                concavecount+=1;
+            }
+        }
+        if(convexcount>1.5*concavecount)
+        {
+            imageSource->at<Vec3b>(Point(contours[i].x, contours[i].y))[0]=255;
+            imageSource->at<Vec3b>(Point(contours[i].x, contours[i].y))[1]=0;
+            imageSource->at<Vec3b>(Point(contours[i].x, contours[i].y))[2]=0;
+        }
+        else if(concavecount>1.5*convexcount)
+        {
+            imageSource->at<Vec3b>(Point(contours[i].x, contours[i].y))[0]=255;
+            imageSource->at<Vec3b>(Point(contours[i].x, contours[i].y))[1]=255;
+            imageSource->at<Vec3b>(Point(contours[i].x, contours[i].y))[2]=255;
+        }
+
+        //Find parabolic point
+        if(abs(concavecount-convexcount)<3)
+        {
+            imageSource->at<Vec3b>(Point(contours[i].x, contours[i].y))[0]=255;
+            imageSource->at<Vec3b>(Point(contours[i].x, contours[i].y))[1]=255;
+            imageSource->at<Vec3b>(Point(contours[i].x, contours[i].y))[2]=0;
+        }
+
+
+    }
 }
 
 vector< double > Genesyndata::computeCurvature(vector<Point> vecContourPoints,int step, vector<int> *cornerindex,int minAngle)
@@ -573,19 +767,21 @@ vector< double > Genesyndata::computeCurvature(vector<Point> vecContourPoints,in
 
       for (int i = 0; i < vecContourPoints.size(); i++ )
       {
-          int iminus = i-5;
-          int iplus = i+5;
+          int iminus = i-3;
+          int iplus = i+3;
           const cv::Point2f& pos = vecContourPoints[i];
 
           cv::Point2f pminus_corner = vecContourPoints[iminus < 0 ? iminus + vecContourPoints.size() : iminus];
           cv::Point2f pplus_corner = vecContourPoints[iplus > vecContourPoints.size() ? iplus - vecContourPoints.size() : iplus];
 
           //Calculate angle between current and previous point
-          double previousAngle = abs(atan2( pos.y - pminus_corner.y, pos.x - pminus_corner.x ) * 180 / M_PI);
-          double currentAngle = abs(atan2( pplus_corner.y-pos.y, pplus_corner.x-pos.x ) * 180 / M_PI);
+          double adotb = (pos.y - pminus_corner.y)*(pplus_corner.y-pos.y)+(pos.x - pminus_corner.x)*(pplus_corner.x-pos.x);
+          double anormdotbnorm = sqrt(pow(pplus_corner.x-pos.x,2)+pow(pplus_corner.y-pos.y,2))*sqrt(pow(pos.y - pminus_corner.y,2)+pow(pos.x - pminus_corner.x,2));
 
-          double diffangle = abs(previousAngle-currentAngle);
+          double costheta = adotb/anormdotbnorm;
+          if(costheta>1) costheta=1;
 
+          double diffangle = abs(acos(costheta)*180.0/M_PI);
 
           if (diffangle>minAngle)
           {
@@ -597,82 +793,58 @@ vector< double > Genesyndata::computeCurvature(vector<Point> vecContourPoints,in
       cv::Point2f f1stDerivative, f2ndDerivative;
       for (int i = 0; i < vecContourPoints.size(); i++ )
       {
-          vector<cv::Point2f> pplus, pminus;
-          const cv::Point2f& pos = vecContourPoints[i];
+          cv::Point2f pplus, pminus;
+          cv::Point2f pos = vecContourPoints[i];
 
           int maxStep = step;
-          if (!isClosed)
+
+          //Central diff
+          int iminus = i-maxStep;
+          int iplus = i+maxStep;
+          pminus = vecContourPoints[iminus < 0 ? iminus + vecContourPoints.size() : iminus];
+          pplus = vecContourPoints[iplus > vecContourPoints.size() ? iplus - vecContourPoints.size() : iplus];
+
+        int hascorner=0;
+        //Check if corner points are within neighbor
+        for(int u=0;u<cornerindex->size();u++)
+        {
+            if(iminus<(*cornerindex)[u]&&iplus>(*cornerindex)[u])
             {
-              maxStep = std::min(std::min(step, i), (int)vecContourPoints.size()-1-i);
-              if (maxStep == 0)
-                {
-                  vecCurvature[i] = std::numeric_limits<double>::infinity();
-                  continue;
-                }
+              if((*cornerindex)[u]>i)
+              {
+                  hascorner=1; //Use backward difference
+                  pplus=vecContourPoints[(*cornerindex)[u]];
+                  pos = vecContourPoints[round((*cornerindex)[u]+iminus)/2];
+                  iplus=(*cornerindex)[u];
+
+
+
+              }
+              else if ((*cornerindex)[u]<i)
+              {
+                  hascorner=2; //Use forwad difference
+                  pminus=vecContourPoints[(*cornerindex)[u]];
+                  pos = vecContourPoints[round((*cornerindex)[u]+iplus)/2];
+                  iminus=(*cornerindex)[u];
+              }
+              else
+              {
+                  hascorner = 3;
+                  pminus=pos;
+                  pplus=pos;
+              }
+              break;
             }
 
-//          int iminus = i-maxStep;
-//          int iplus = i+maxStep;
-          int iminus;
-          int iplus;
-          for(int j=1;j<4;j++)
-          {
-              iminus = i-maxStep*j;
-              iplus = i+maxStep*j;
-              pminus.push_back( vecContourPoints[iminus < 0 ? iminus + vecContourPoints.size() : iminus]);
-              pplus.push_back( vecContourPoints[iplus > vecContourPoints.size() ? iplus - vecContourPoints.size() : iplus]);
+        }
 
 
 
-          }
 
-          int hascorner=0;
-          //Check if corner points are within neighbor
-          for(int u=0;u<cornerindex->size();u++)
-          {
-              if(iminus<(*cornerindex)[u]&&iplus>(*cornerindex)[u])
-              {
-                if((*cornerindex)[u]>i)
-                {
-                    hascorner=1; //Use backward difference
-                    for(int v=0;v<3;v++){
-                        pplus[v]=pos;
-                    }
-
-                }
-                else if ((*cornerindex)[u]<i)
-                {
-                    hascorner=2; //Use forwad difference
-
-                    for(int v=0;v<3;v++){
-                        pminus[v]=pos;
-                    }
-                }
-                else
-                {
-                    hascorner = 3;
-                    for(int v=0;v<3;v++){
-                        pminus[v]=pos;
-                        pplus[v]=pos;
-                    }
-
-                }
-                break;
-              }
-          }
-
-
-
-           //cout<<pplus[2].x<<" "<<pplus[1].x<< " "<<pplus[0].x<<endl;
-
-//          pminus = vecContourPoints[iminus < 0 ? iminus + vecContourPoints.size() : iminus];
-//          pplus = vecContourPoints[iplus > vecContourPoints.size() ? iplus - vecContourPoints.size() : iplus];
-
-
-          f1stDerivative.x =   (pplus[2].x-9*pplus[1].x+45*pplus[0].x -  45*pminus[0].x+9*pminus[1].x-pminus[2].x) / (60*maxStep);//(iplus-iminus);
-          f1stDerivative.y =   (pplus[2].y-9*pplus[1].y+45*pplus[0].y -  45*pminus[0].y+9*pminus[1].y-pminus[2].y) / (60*maxStep);//(pplus.y -        pminus.y) / (iplus-iminus);
-          f2ndDerivative.x = (2*pplus[2].x-27*pplus[1].x+270*pplus[0].x-490*pos.x+270*pminus[0].x-27*pminus[1].x+2*pminus[2].x)/(180*maxStep*maxStep);//(pplus.x - 2*pos.x + pminus.x) / ((iplus-iminus)/2*(iplus-iminus)/2);
-          f2ndDerivative.y = (2*pplus[2].y-27*pplus[1].y+270*pplus[0].y-490*pos.y+270*pminus[0].y-27*pminus[1].y+2*pminus[2].y)/(180*maxStep*maxStep);//(pplus.y - 2*pos.y + pminus.y) / ((iplus-iminus)/2*(iplus-iminus)/2);
+          f1stDerivative.x =   (pplus.x -        pminus.x) / (iplus-iminus);
+          f1stDerivative.y =   (pplus.y -        pminus.y) / (iplus-iminus);
+          f2ndDerivative.x = (pplus.x - 2*pos.x + pminus.x) / ((iplus-iminus)/2*(iplus-iminus)/2);
+          f2ndDerivative.y = (pplus.y - 2*pos.y + pminus.y) / ((iplus-iminus)/2*(iplus-iminus)/2);
 
           double curvature2D;
           double divisor = f1stDerivative.x*f1stDerivative.x + f1stDerivative.y*f1stDerivative.y;
@@ -687,6 +859,84 @@ vector< double > Genesyndata::computeCurvature(vector<Point> vecContourPoints,in
             }
 
           vecCurvature[i] = curvature2D;
+
+          //==================
+
+
+//          int iminus;
+//          int iplus;
+//          for(int j=1;j<4;j++)
+//          {
+//              iminus = i-maxStep*j;
+//              iplus = i+maxStep*j;
+//              pminus.push_back( vecContourPoints[iminus < 0 ? iminus + vecContourPoints.size() : iminus]);
+//              pplus.push_back( vecContourPoints[iplus > vecContourPoints.size() ? iplus - vecContourPoints.size() : iplus]);
+
+
+
+//          }
+
+//          int hascorner=0;
+//          //Check if corner points are within neighbor
+//          for(int u=0;u<cornerindex->size();u++)
+//          {
+//              if(iminus<(*cornerindex)[u]&&iplus>(*cornerindex)[u])
+//              {
+//                if((*cornerindex)[u]>i)
+//                {
+//                    hascorner=1; //Use backward difference
+//                    for(int v=0;v<3;v++){
+//                        pplus[v]=pos;
+//                    }
+
+//                }
+//                else if ((*cornerindex)[u]<i)
+//                {
+//                    hascorner=2; //Use forwad difference
+
+//                    for(int v=0;v<3;v++){
+//                        pminus[v]=pos;
+//                    }
+//                }
+//                else
+//                {
+//                    hascorner = 3;
+//                    for(int v=0;v<3;v++){
+//                        pminus[v]=pos;
+//                        pplus[v]=pos;
+//                    }
+
+//                }
+//                break;
+//              }
+//          }
+
+
+
+//           //cout<<pplus[2].x<<" "<<pplus[1].x<< " "<<pplus[0].x<<endl;
+
+////          pminus = vecContourPoints[iminus < 0 ? iminus + vecContourPoints.size() : iminus];
+////          pplus = vecContourPoints[iplus > vecContourPoints.size() ? iplus - vecContourPoints.size() : iplus];
+
+
+//          f1stDerivative.x =   (pplus[2].x-9*pplus[1].x+45*pplus[0].x -  45*pminus[0].x+9*pminus[1].x-pminus[2].x) / (60*maxStep);//(iplus-iminus);
+//          f1stDerivative.y =   (pplus[2].y-9*pplus[1].y+45*pplus[0].y -  45*pminus[0].y+9*pminus[1].y-pminus[2].y) / (60*maxStep);//(pplus.y -        pminus.y) / (iplus-iminus);
+//          f2ndDerivative.x = (2*pplus[2].x-27*pplus[1].x+270*pplus[0].x-490*pos.x+270*pminus[0].x-27*pminus[1].x+2*pminus[2].x)/(180*maxStep*maxStep);//(pplus.x - 2*pos.x + pminus.x) / ((iplus-iminus)/2*(iplus-iminus)/2);
+//          f2ndDerivative.y = (2*pplus[2].y-27*pplus[1].y+270*pplus[0].y-490*pos.y+270*pminus[0].y-27*pminus[1].y+2*pminus[2].y)/(180*maxStep*maxStep);//(pplus.y - 2*pos.y + pminus.y) / ((iplus-iminus)/2*(iplus-iminus)/2);
+
+//          double curvature2D;
+//          double divisor = f1stDerivative.x*f1stDerivative.x + f1stDerivative.y*f1stDerivative.y;
+//          if ( std::abs(divisor) > 10e-8 )
+//            {
+//              curvature2D =  (f2ndDerivative.y*f1stDerivative.x - f2ndDerivative.x*f1stDerivative.y) /
+//                    pow(divisor, 3.0/2.0 )  ;
+//            }
+//          else
+//            {
+//              curvature2D = std::numeric_limits<double>::infinity();
+//            }
+
+//          vecCurvature[i] = curvature2D;
 
 
       }

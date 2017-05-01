@@ -145,8 +145,8 @@ void MainWindow::on_actionModify_triggered()
 //        //this->movecamaround();
 //    }
 
-    //m_syndata->get_orthognal_normal_view(m_syndata->getparametricdata(),widget->GetRenderWindow());
     m_syndata->get_orthognal_normal_view(m_filemanager->getfile(),widget->GetRenderWindow());
+    //m_syndata->get_orthognal_normal_view(m_filemanager->getfile(),widget->GetRenderWindow());
 }
 
 
@@ -176,19 +176,15 @@ void MainWindow::movecamaround()
 
 void MainWindow::on_actionParametricBoy_triggered()
 {
-    m_syndata->renderparametricmodel();
+    m_filemanager->renderparametricmodel();
 
-    vtkSmartPointer<vtkCallbackCommand> keypressCallback =
-      vtkSmartPointer<vtkCallbackCommand>::New();
-    keypressCallback->SetCallback ( KeypressCallbackFunction );
-    keypressCallback->SetClientData(this);
+    m_syndata->rendermodel(m_filemanager->getfile());
 
-    QVTKWidget* widget = this->findChild<QVTKWidget*>("qvtk");
 
-    widget->GetRenderWindow()->GetInteractor()->AddObserver ( vtkCommand::KeyPressEvent, keypressCallback );
-    std::cout<<"call back"<<std::endl;
 
 }
+
+
 
 
 void KeypressCallbackFunction ( vtkObject* caller, long unsigned int vtkNotUsed(eventId), void* clientData, void* vtkNotUsed(callData) )
@@ -197,9 +193,22 @@ void KeypressCallbackFunction ( vtkObject* caller, long unsigned int vtkNotUsed(
     MainWindow* t_window =
       static_cast<MainWindow*>(clientData);
     QVTKWidget* widget = t_window->findChild<QVTKWidget*>("qvtk");
-    t_window->m_syndata->get_orthognal_normal_view(t_window->m_syndata->getparametricdata(),widget->GetRenderWindow());
+    t_window->m_syndata->get_orthognal_normal_view(t_window->m_filemanager->getfile(),widget->GetRenderWindow());
 
     //std::cout<<"call back"<<std::endl;
 
 }
 
+
+void MainWindow::on_actionAnalyse_contour_triggered()
+{
+    vtkSmartPointer<vtkCallbackCommand> keypressCallback =
+      vtkSmartPointer<vtkCallbackCommand>::New();
+    keypressCallback->SetCallback ( KeypressCallbackFunction );
+    keypressCallback->SetClientData(this);
+
+    QVTKWidget* widget = this->findChild<QVTKWidget*>("qvtk");
+
+    widget->GetRenderWindow()->GetInteractor()->AddObserver ( vtkCommand::KeyPressEvent, keypressCallback );
+
+}
