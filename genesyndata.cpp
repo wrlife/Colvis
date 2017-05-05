@@ -399,26 +399,28 @@ void Genesyndata::get_orthognal_normal_view(vtkSmartPointer<vtkPolyData> t_model
 
 
         //Opencv edge detection
-        edgedetection(filename);
+        int goodedge = edgedetection(filename);
 
 
-        //Color convex points
+        if(goodedge==1){
+            //Color convex points
 
-        double contourcolor[3],surfacecolor[3];
-        contourcolor[0]=255;contourcolor[1]=0;contourcolor[2]=0;
-        surfacecolor[0]=0;surfacecolor[1]=0;surfacecolor[2]=255;
-        coloronsurface(t_model,contourcolor,surfacecolor);
+            double contourcolor[3],surfacecolor[3];
+            contourcolor[0]=255;contourcolor[1]=0;contourcolor[2]=0;
+            surfacecolor[0]=0;surfacecolor[1]=0;surfacecolor[2]=255;
+            coloronsurface(t_model,contourcolor,surfacecolor);
 
-        //Color concave points
-        contourcolor[0]=255;contourcolor[1]=255;contourcolor[2]=255;
-        surfacecolor[0]=0;surfacecolor[1]=255;surfacecolor[2]=0;
-        coloronsurface(t_model,contourcolor,surfacecolor);
+            //Color concave points
+            contourcolor[0]=0;contourcolor[1]=255;contourcolor[2]=0;
+            surfacecolor[0]=0;surfacecolor[1]=255;surfacecolor[2]=0;
+            coloronsurface(t_model,contourcolor,surfacecolor);
 
-        //Color parabolic points
+            //Color parabolic points
 
-        contourcolor[0]=255;contourcolor[1]=255;contourcolor[2]=0;
-        surfacecolor[0]=255;surfacecolor[1]=0;surfacecolor[2]=0;
-        coloronsurface(t_model,contourcolor,surfacecolor);
+            contourcolor[0]=0;contourcolor[1]=0;contourcolor[2]=255;
+            surfacecolor[0]=255;surfacecolor[1]=0;surfacecolor[2]=0;
+            coloronsurface(t_model,contourcolor,surfacecolor);
+        }
 
 
 
@@ -453,9 +455,20 @@ void Genesyndata::coloronsurface(vtkSmartPointer<vtkPolyData> outputPolyData,dou
 
     double color[3];
 
+    //===================
+    //Find closest point in 3D
+    //====================
+    // Create the tree
+    vtkSmartPointer<vtkCellLocator> cellLocator =
+      vtkSmartPointer<vtkCellLocator>::New();
+    cellLocator->SetDataSet(outputPolyData);
+    cellLocator->BuildLocator();
+    vtkSmartPointer<vtkPolygonalSurfacePointPlacer> mplacer = vtkSmartPointer<vtkPolygonalSurfacePointPlacer>::New();
+    mplacer->AddProp(m_Actor);
 
 
     for(int i = 0; i < m_contour.size(); i++){
+
 
         Vec3b tmpcolor = imageSource.at<Vec3b>(Point(m_contour[i].x, m_contour[i].y));
         if(tmpcolor[0]==contourcolor[0]&&tmpcolor[1]==contourcolor[1]&&tmpcolor[2]==contourcolor[2]){
@@ -463,16 +476,6 @@ void Genesyndata::coloronsurface(vtkSmartPointer<vtkPolyData> outputPolyData,dou
             color[1]=surfacecolor[1];
             color[2]=surfacecolor[2];
 
-            //===================
-            //Find closest point in 3D
-            //====================
-            // Create the tree
-            vtkSmartPointer<vtkCellLocator> cellLocator =
-              vtkSmartPointer<vtkCellLocator>::New();
-            cellLocator->SetDataSet(outputPolyData);
-            cellLocator->BuildLocator();
-            vtkSmartPointer<vtkPolygonalSurfacePointPlacer> mplacer = vtkSmartPointer<vtkPolygonalSurfacePointPlacer>::New();
-            mplacer->AddProp(m_Actor);
 
             double pixel[2];
 
@@ -485,9 +488,14 @@ void Genesyndata::coloronsurface(vtkSmartPointer<vtkPolyData> outputPolyData,dou
             double world[3];
             double worldOrient[9];
 
-            mplacer->ComputeWorldPosition(m_renderer,pixel,world,worldOrient);
+            int gotpoint = mplacer->ComputeWorldPosition(m_renderer,pixel,world,worldOrient);
 
-           // std::cout << "World coordinate: " << world[0] << ", " << world[1] << ", " << world[2] << std::endl;
+            if(gotpoint==0)
+            {
+                continue;
+            }
+
+            //std::cout << "World coordinate: " << world[0] << ", " << world[1] << ", " << world[2] << std::endl;
 
 
             double closestPoint[3];//the coordinates of the closest point will be returned here
@@ -555,7 +563,7 @@ void Genesyndata::coloronsurface(vtkSmartPointer<vtkPolyData> outputPolyData,dou
 }
 
 
-void Genesyndata::edgedetection(std::string filename)
+int Genesyndata::edgedetection(std::string filename)
 {
     Mat src; Mat src_gray; Mat binary;
     RNG rng(12345);
@@ -579,6 +587,12 @@ void Genesyndata::edgedetection(std::string filename)
     dilate( binary, binary, element );
     erode(binary,binary,element);
 
+    erosion_size=1;
+    element = getStructuringElement( erosion_type,
+                                         Size( 2*erosion_size + 1, 2*erosion_size+1 ),
+                                         Point( erosion_size, erosion_size ) );
+    erode(binary,binary,element);
+
     imwrite( "binary.png", binary );
 
     blur( src_gray, src_gray, Size(3,3) );
@@ -595,12 +609,6 @@ void Genesyndata::edgedetection(std::string filename)
     findContours( canny_output, contours, hierarchy, CV_RETR_CCOMP, CV_CHAIN_APPROX_NONE, Point(0, 0) );
 
 
-    /// Draw contours
-    Mat drawing = Mat::zeros( canny_output.size(), CV_8UC3 );
-
-
-    Scalar color = Scalar( rng.uniform(0, 255), rng.uniform(0,255), rng.uniform(0,255) );
-
     int largestcontour=0;
     int largestcontourid=0;
     for(int i=0;i<contours.size();i++)
@@ -615,7 +623,7 @@ void Genesyndata::edgedetection(std::string filename)
 
     if(hierarchy[largestcontourid][2] == -1)
     {
-        return;
+        return -1;
     }
 
     //drawContours( drawing, contours, largestcontourid, color, 1, 8, hierarchy, 0, Point() );
@@ -634,15 +642,14 @@ void Genesyndata::edgedetection(std::string filename)
 
     //Draw those points on a image
 
-    int extent[6] = {0,t_width,0,t_height,0,0};
 
-
-    imageSource = Mat(t_width,t_height, CV_8UC3, cvScalar(0,0,0));
+    imageSource = Mat(t_height,t_width, CV_8UC3, cvScalar(0,0,0));
 
     for(int i=0;i<contours[largestcontourid].size();i++)
     {
         if (vecCurvature[i]<0)
         {
+        //cout<<"x: "<<contours[largestcontourid][i].x<<"y: "<<contours[largestcontourid][i].y<<endl;
 
             imageSource.at<Vec3b>(Point(contours[largestcontourid][i].x, contours[largestcontourid][i].y))[0]=255;
 
@@ -650,9 +657,7 @@ void Genesyndata::edgedetection(std::string filename)
         if (vecCurvature[i]>0&&vecCurvature[i]!=std::numeric_limits<double>::infinity())
         {
 
-            imageSource.at<Vec3b>(Point(contours[largestcontourid][i].x, contours[largestcontourid][i].y))[0]=255;
             imageSource.at<Vec3b>(Point(contours[largestcontourid][i].x, contours[largestcontourid][i].y))[1]=255;
-            imageSource.at<Vec3b>(Point(contours[largestcontourid][i].x, contours[largestcontourid][i].y))[2]=255;
 
         }
 
@@ -661,6 +666,8 @@ void Genesyndata::edgedetection(std::string filename)
     for(int i = 0;i<cornerindex.size();i++)
     {
 
+        imageSource.at<Vec3b>(Point(contours[largestcontourid][cornerindex[i]].x,contours[largestcontourid][cornerindex[i]].y))[0]=255;
+        imageSource.at<Vec3b>(Point(contours[largestcontourid][cornerindex[i]].x,contours[largestcontourid][cornerindex[i]].y))[1]=255;
         imageSource.at<Vec3b>(Point(contours[largestcontourid][cornerindex[i]].x,contours[largestcontourid][cornerindex[i]].y))[2]=255;
     }
 
@@ -672,6 +679,8 @@ void Genesyndata::edgedetection(std::string filename)
     // Show in a window
     namedWindow( "Contours", CV_WINDOW_AUTOSIZE );
     imshow( "Contours", imageSource );
+
+    return 1;
 
 
 }
@@ -688,7 +697,7 @@ void Genesyndata::postprocessCurvature(Mat *imageSource,vector<Point> contours)
         int concavecount=0;
         int convexcount=0;
         color = imageSource->at<Vec3b>(Point(contours[i].x, contours[i].y));
-        if(color[0] ==0&&color[1]==0&&color[2]==255)
+        if(color[0] ==255&&color[1]==255&&color[2]==255)
         {
             continue;
         }
@@ -698,14 +707,14 @@ void Genesyndata::postprocessCurvature(Mat *imageSource,vector<Point> contours)
             int iminus = i-j;
             iminus = iminus < 0 ? iminus + contours.size() : iminus;
             int iplus = i+j;
-            iplus = iplus > contours.size() ? iplus - contours.size() : iplus;
+            iplus = iplus >= contours.size() ? iplus - contours.size() : iplus;
 
             color = imageSource->at<Vec3b>(Point(contours[iminus].x, contours[iminus].y));
             if(color[0]==255&&color[1]==0&&color[2]==0)
             {
                 convexcount+=1;
             }
-            else if (color[0]==255&&color[1]==255&&color[2]==255)
+            else if (color[0]==0&&color[1]==255&&color[2]==0)
             {
                 concavecount+=1;
             }
@@ -714,7 +723,7 @@ void Genesyndata::postprocessCurvature(Mat *imageSource,vector<Point> contours)
             {
                 convexcount+=1;
             }
-            else if (color[0]==255&&color[1]==255&&color[2]==255)
+            else if (color[0]==0&&color[1]==255&&color[2]==0)
             {
                 concavecount+=1;
             }
@@ -727,17 +736,17 @@ void Genesyndata::postprocessCurvature(Mat *imageSource,vector<Point> contours)
         }
         else if(concavecount>1.5*convexcount)
         {
-            imageSource->at<Vec3b>(Point(contours[i].x, contours[i].y))[0]=255;
+            imageSource->at<Vec3b>(Point(contours[i].x, contours[i].y))[0]=0;
             imageSource->at<Vec3b>(Point(contours[i].x, contours[i].y))[1]=255;
-            imageSource->at<Vec3b>(Point(contours[i].x, contours[i].y))[2]=255;
+            imageSource->at<Vec3b>(Point(contours[i].x, contours[i].y))[2]=0;
         }
 
         //Find parabolic point
         if(abs(concavecount-convexcount)<3)
         {
-            imageSource->at<Vec3b>(Point(contours[i].x, contours[i].y))[0]=255;
-            imageSource->at<Vec3b>(Point(contours[i].x, contours[i].y))[1]=255;
-            imageSource->at<Vec3b>(Point(contours[i].x, contours[i].y))[2]=0;
+            imageSource->at<Vec3b>(Point(contours[i].x, contours[i].y))[0]=0;
+            imageSource->at<Vec3b>(Point(contours[i].x, contours[i].y))[1]=0;
+            imageSource->at<Vec3b>(Point(contours[i].x, contours[i].y))[2]=255;
         }
 
 

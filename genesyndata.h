@@ -62,7 +62,7 @@ public:
     void get_orthognal_normal_view(vtkSmartPointer<vtkPolyData> t_model, vtkRenderWindow *t_renderwin);
 
 
-    void edgedetection(std::string filename);
+    int edgedetection(std::string filename);
     std::vector< double > computeCurvature(std::vector<cv::Point> vecContourPoints, int step, vector<int> *cornerindex, int minAngle);
 
     void postprocessCurvature(Mat *imageSource,vector<Point>contour);
