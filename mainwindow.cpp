@@ -185,8 +185,6 @@ void MainWindow::on_actionParametricBoy_triggered()
 }
 
 
-
-
 void KeypressCallbackFunction ( vtkObject* caller, long unsigned int vtkNotUsed(eventId), void* clientData, void* vtkNotUsed(callData) )
 {
 

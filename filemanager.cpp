@@ -12,6 +12,9 @@ Filemanager::Filemanager()
 }
 
 
+//==================
+//Read different file format
+//==================
 void Filemanager::loadnewfile(QString filename)
 {
 
